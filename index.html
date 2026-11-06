@@ -141,7 +141,7 @@ function importLyrics(source){
    save('motion');notice='已匯入 '+data.length+' 筆 cue';render();sync();
 }
 function linkForm(type,label){
- return `<form class="bar link-form" data-source="${type}"><label>${label}雲端連結 <input type="url" placeholder="貼上雲端連結" required></label><button>載入${label}連結</button><output class="muted"></output></form>`;
+ return `<form class="bar link-form" data-source="${type}"><label>${label}雲端連結 <input type="url" placeholder="貼上雲端連結" required></label><button>載入${label}連結</button><output class="muted"></output>${type==='lyrics'?'<label>貼上 Google 文件表格 <textarea rows="2" placeholder="在 Google 文件選取表格、複製，再貼到這裡"></textarea></label>':''}</form>`;
 }
 function driveDownload(input){
  const url=new URL(input);
@@ -164,14 +164,50 @@ function driveDownload(input){
  if(url.hostname==='docs.google.com')throw Error('Google 文件表格請先另存為 CSV，或改用 Google 試算表連結。');
  return url.href;
 }
+function importDocumentTable(html){
+ const doc=new DOMParser().parseFromString(html,'text/html');
+ for(const table of doc.querySelectorAll('table')){
+  const rows=Array.from(table.rows,row=>Array.from(row.cells,cell=>{
+   cell.querySelectorAll('br').forEach(br=>br.replaceWith('\n'));
+   const blocks=Array.from(cell.children).filter(node=>node.matches('p,div'));
+   return (blocks.length?blocks.map(node=>node.textContent).join('\n'):cell.textContent).trim();
+  }));
+  const header=rows.findIndex(row=>['時間','藝人','歌詞'].every(label=>row.includes(label)));
+  if(header>=0){
+   const csv=rows.slice(header).map(row=>row.map(value=>'"'+value.replaceAll('"','""')+'"').join(',')).join('\n');
+   importLyrics(csv);
+   return;
+  }
+ }
+ throw Error('找不到含時間、藝人與歌詞的表格');
+}
 function bindSources(){
  for(const form of document.querySelectorAll('.link-form')){
+  const paste=form.querySelector('textarea');
+  if(paste)paste.onpaste=event=>{
+   const html=event.clipboardData.getData('text/html');
+   event.preventDefault();
+   try{importDocumentTable(html)}
+   catch(error){form.querySelector('output').textContent=error.message+'。請從 Google 文件複製整張表格，包含欄名。'}
+  };
   form.onsubmit=async event=>{
    event.preventDefault();
    const status=form.querySelector('output'), button=form.querySelector('button');
    status.textContent='正在讀取連結…';button.disabled=true;
    try{
-    const url=driveDownload(form.querySelector('input').value.trim());
+    const input=form.querySelector('input').value.trim();
+    const link=new URL(input);
+    const docId=link.hostname==='docs.google.com'&&link.pathname.match(/^\/document\/d\/([\w-]+)/)?.[1];
+    if(docId&&form.dataset.source==='lyrics'){
+     try{
+      const response=await fetch('https://docs.google.com/document/d/'+docId+'/export?format=html',{credentials:'omit',signal:AbortSignal.timeout(10000)});
+      if(!response.ok)throw Error();
+      const html=await response.text();
+      if(form.isConnected)importDocumentTable(html);
+     }catch{status.textContent='Google 未開放直接讀取這份文件。請開啟原文件，複製整張表格後貼到下方。';paste.focus()}
+     return;
+    }
+    const url=driveDownload(input);
     if(form.dataset.source==='audio'){
      loadAudio(url);
      status.textContent='';
