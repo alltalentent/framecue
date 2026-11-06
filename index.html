@@ -21,9 +21,9 @@ const fmt=t=>{const ms=Math.round(Math.max(0,t)*1000);return [Math.floor(ms/6000
 const route=()=>location.hash.slice(1);
 const now=()=>Math.min(duration,media&&route()==='motion'?audio.currentTime:anchor+(running?(performance.now()-stamp)/1000:0));
 const sorted=key=>rows[key].filter(r=>Number.isFinite(r.t)&&r.t>=0&&(r.name.trim()||(key==='motion'&&r.section))).slice().sort((a,b)=>a.t-b.t);
-function sync(){channel.postMessage({t:now(),playing:running,at:(performance.timeOrigin+performance.now()),duration,rows:sorted('motion')})}
+function sync(){if(motionStep!=='live')return;channel.postMessage({t:now(),playing:running,at:(performance.timeOrigin+performance.now()),duration,rows:sorted('motion')})}
 channel.onmessage=({data})=>{remote=data};
-setInterval(()=>{if(route()==='motion')sync()},100);
+setInterval(()=>{if(route()==='motion'&&motionStep==='live')sync()},100);
 function showDuration(){return Math.max(0,...sorted('shots').map(r=>r.t+1))}
 function save(key){localStorage.setItem('framecue-project-'+key,JSON.stringify(rows[key]))}
 function pause(){anchor=now();running=false;audio.pause()}
@@ -41,8 +41,9 @@ function validation(key){
  });
 }
 function home(){return `<h1>現場製作工具</h1><section class="tool-list">${[['01','運鏡提示器','匯入分配表，跟著音樂提示現在、下一位和移動方向。','motion'],['02','多機鏡位編排','事先排定時間、切換機位與構圖指令。','shots'],['03','現場導播 Run Show','跟著時間軸或按 GO，查看目前和下一鏡。','run']].map(([n,t,d,id])=>`<a class="tool-row" href="#${id}"><div class="tag">${n} / TOOL</div><h2>${t}</h2><p>${d}</p><span class="accent">↗</span></a>`).join('')}</section>`}
-function editor(key){return `<section class="panel"><h2>${key==='motion'?'歌詞分配與走位':'鏡位時間軸'}</h2><div class="bar"><button id="add">＋ 新增 cue</button>${key==='motion'?'<label>載入歌詞 <input id="csv" type="file" accept=".csv,text/csv"></label>':'<a class="button primary" href="#run">進入 Run Show ↗</a>'}</div>${key==='motion'?linkForm('lyrics','歌詞'):''}<p class="muted" id="validate"></p><div class="table"><table><thead><tr><th>時間（秒）</th>${key==='motion'?'<th>段落</th>':''}<th>${key==='motion'?'開口者／段落':'攝影機'}</th>${key==='motion'?'<th>歌詞</th>':''}<th>拍攝指令</th><th>提前（秒）</th><th></th></tr></thead><tbody>${rows[key].map((r,i)=>`<tr>${(key==='motion'?['t','section','name','lyric','note','lead']:['t','name','note','lead']).map(k=>`<td><${k==='lyric'?'textarea':'input'} aria-label="${({t:'時間',section:'段落',lyric:'歌詞',name:'名稱',note:'拍攝指令',lead:'提前秒數'})[k]}，第 ${i+1} 列" data-row="${i}" data-key="${k}" ${k==='lyric'?'>'+esc(r[k])+'</textarea>':'value="'+esc(r[k])+'">'}</td>`).join('')}<td><button data-jump="${i}">定位</button> <button data-delete="${i}" aria-label="刪除第 ${i+1} 列">×</button></td></tr>`).join('')}</tbody></table></div></section>`}
-function transport(key){return `<section class="panel"><div class="tag">${key==='motion'?'MUSIC MASTER':'SHOW TRANSPORT'}</div><div class="clock" id="clock"></div><input aria-label="播放進度" id="seek" type="range" min="0" step=".001"><div class="bar"><button class="primary" id="play">播放</button><button id="reset">回起點</button>${key==='motion'?'<label>載入音樂 <input id="audio" type="file" accept="audio/*,.wav"></label><a class="button" href="#monitor" target="_blank" rel="noopener">開啟攝影提示端 ↗</a>':route()==='run'?'<button id="go">GO 下一鏡</button>':''}</div>${key==='motion'?linkForm('audio','音樂'):''}<small id="media-label"></small></section>`}
+let motionStep='upload', analyzed=false, offset=0;
+function editor(key){return `<section class="panel"><h2>${key==='motion'?'歌詞分配與走位':'鏡位時間軸'}</h2><div class="bar"><button id="add">＋ 新增 cue</button>${key==='motion'?(motionStep==='upload'?'<label>載入歌詞 <input id="csv" type="file" accept=".csv,text/csv"></label>':''):'<a class="button primary" href="#run">進入 Run Show ↗</a>'}</div>${key==='motion'&&motionStep==='upload'?linkForm('lyrics','歌詞'):''}<p class="muted" id="validate"></p><div class="table"><table><thead><tr><th>時間（秒）</th>${key==='motion'?'<th>段落</th>':''}<th>${key==='motion'?'開口者／段落':'攝影機'}</th>${key==='motion'?'<th>歌詞</th>':''}<th>拍攝指令</th><th>提前（秒）</th><th></th></tr></thead><tbody>${rows[key].map((r,i)=>`<tr>${(key==='motion'?['t','section','name','lyric','note','lead']:['t','name','note','lead']).map(k=>`<td><${k==='lyric'?'textarea':'input'} aria-label="${({t:'時間',section:'段落',lyric:'歌詞',name:'名稱',note:'拍攝指令',lead:'提前秒數'})[k]}，第 ${i+1} 列" data-row="${i}" data-key="${k}" ${k==='lyric'?'>'+esc(r[k])+'</textarea>':'value="'+esc(r[k])+'">'}</td>`).join('')}<td><button data-jump="${i}">定位</button> <button data-delete="${i}" aria-label="刪除第 ${i+1} 列">×</button></td></tr>`).join('')}</tbody></table></div></section>`}
+function transport(key){return `<section class="panel"><div class="tag">${key==='motion'?'MUSIC MASTER':'SHOW TRANSPORT'}</div><div class="clock" id="clock"></div><input aria-label="播放進度" id="seek" type="range" min="0" step=".001"><div class="bar"><button class="primary" id="play">播放</button><button id="reset">回起點</button>${key==='motion'?(motionStep==='upload'?'<label>載入音樂 <input id="audio" type="file" accept="audio/*,.wav"></label>':'<a class="button" href="#monitor" target="_blank" rel="noopener">開啟攝影提示端 ↗</a>'):route()==='run'?'<button id="go">GO 下一鏡</button>':''}</div>${key==='motion'&&motionStep==='upload'?linkForm('audio','音樂'):''}<small id="media-label"></small></section>`}
 function readout(){return '<div class="readout" id="readout"></div>'+(['motion','monitor'].includes(route())?'<section class="panel"><h2>歌詞分配</h2><ol id="lyrics" class="lyrics" aria-label="歌詞分配"></ol></section>':'')}
 function paintLyrics(list,current){
  const el=document.querySelector('#lyrics');if(!el)return;
@@ -67,7 +68,7 @@ function render(){
  if(!['motion','shots','run','monitor'].includes(page)){app.innerHTML=home();return}
  const titles={motion:'運鏡提示器',shots:'多機鏡位編排',run:'現場導播 Run Show',monitor:'攝影提示端'};
  const desc={motion:'主控端 · 匯入歌詞分配表及伴奏，排定拍攝提示',shots:'為每個時間點指定攝影機、拍攝對象與景別',run:'跟著時間軸提示切鏡，也能手動按 GO',monitor:'跟隨同一瀏覽器內開啟的音樂主控端'};
- app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="clock" id="clock"></div>'+readout():transport(key)+(page!=='shots'?readout():'')+(page==='run'?'':editor(key)));
+ app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="clock" id="clock"></div>'+readout():transport(key)+(page==='motion'?motionControls():'')+(page!=='shots'&&(page!=='motion'||motionStep==='live')?readout():'')+(page==='run'||(page==='motion'&&motionStep==='live')?'':editor(key)));
  if(page==='monitor'){paint();return}
  document.querySelector('#play').onclick=async()=>{
   if(running){pause();if(page==='motion')sync();return}
@@ -79,13 +80,13 @@ function render(){
  document.querySelector('#reset').onclick=()=>{pause();seek(0)};
  const go=document.querySelector('#go');
  if(go)go.onclick=()=>{const next=sorted('shots').find(r=>r.t>now()+.001);if(next){pause();seek(next.t)}};
- if(page!=='run'){
+ if(document.querySelector('#add')){
   document.querySelector('#add').onclick=()=>{rows[key].push({t:+now().toFixed(3),name:'',note:'',lead:3});save(key);render();app.querySelector('tbody tr:last-child input[data-key=name]').focus()};
   for(const input of app.querySelectorAll('[data-key]'))input.onchange=()=>{const k=input.dataset.key;rows[key][input.dataset.row][k]=k==='t'?parseTime(input.value):k==='lead'?(input.value.trim()?Number(input.value):null):input.value;save(key);paint()};
   for(const button of app.querySelectorAll('[data-delete]'))button.onclick=()=>{rows[key].splice(+button.dataset.delete,1);save(key);render()};
   for(const button of app.querySelectorAll('[data-jump]'))button.onclick=()=>{const t=rows[key][button.dataset.jump].t;if(Number.isFinite(t)){seek(t);if(page==='motion')sync()}};
  }
- if(page==='motion'){bindFiles();bindSources()}
+ if(page==='motion')bindMotion();
  paint();
 }
 function parseTime(value){
@@ -121,6 +122,7 @@ function bindFiles(){
 
 }
 function loadAudio(file){
+  analyzed=false;offset=0;
   pause();media=false;duration=0;seek(0);if(audioURL)URL.revokeObjectURL(audioURL);
   audioURL=typeof file==='string'?'':URL.createObjectURL(file);notice='正在讀取音樂…';
   audio.onloadedmetadata=()=>{if(!Number.isFinite(audio.duration)){notice='無法取得音樂長度';return}media=true;notice=typeof file==='string'?'已載入連結音檔':file.name;if(route()==='motion'){duration=audio.duration;seek(0);paint()}};
@@ -138,7 +140,7 @@ function importLyrics(source){
     const name=get(artist);
     return {t:parseTime(get('時間')),section:get('段落'),name:name==='-'?'':name,lyric:get('歌詞'),note:get('拍攝指令'),lead:get('提前秒數').trim()?Number(get('提前秒數')):2};
    });
-   save('motion');notice='已匯入 '+data.length+' 筆 cue';render();sync();
+   analyzed=false;offset=0;save('motion');notice='已匯入 '+data.length+' 筆 cue';render();sync();
 }
 function linkForm(type,label){
  return `<form class="bar link-form" data-source="${type}"><label>${label}雲端連結 <input type="url" placeholder="貼上雲端連結" required></label><button>載入${label}連結</button><output class="muted"></output>${type==='lyrics'?'<label>貼上 Google 文件表格 <textarea rows="2" placeholder="在 Google 文件選取表格、複製，再貼到這裡"></textarea></label>':''}</form>`;
@@ -222,6 +224,40 @@ function bindSources(){
   };
  }
 }
+function motionControls(){
+ if(motionStep==='live')return '<div class="bar"><button id="motion-back">返回確認</button></div>';
+ if(motionStep==='upload')return '<section class="panel"><div class="tag">01 / 載入素材</div><p>載入音樂與歌詞後即可檢查時間。</p><button class="primary" id="motion-analyze">分析歌詞時間</button></section>';
+ return `<section class="panel"><div class="tag">02 / 確認時間</div><p>系統會核對時間是否落在音檔內。請播放試聽，確認每條提示和實際開口時間。不同版本可整體平移，或在下方逐條修正。</p><div class="bar"><label>整體偏移（秒） <input type="number" step=".001" id="motion-offset" value="${offset}"></label><button id="motion-apply">套用偏移</button><button id="motion-back">返回載入</button><button class="primary" id="motion-enter">確認並進入提示器</button></div><output id="motion-result" class="muted"></output></section>`;
+}
+function bindMotion(){
+ if(motionStep==='upload'){
+  bindFiles();bindSources();
+  document.querySelector('#motion-analyze').onclick=()=>{
+   analyzed=true;motionStep='review';pause();render();
+  };
+  return;
+ }
+ document.querySelector('#motion-back').onclick=()=>{
+  pause();motionStep=motionStep==='live'?'review':'upload';render();sync();
+ };
+ if(motionStep!=='review')return;
+ const result=document.querySelector('#motion-result');
+ document.querySelector('#motion-apply').onclick=()=>{
+  const input=document.querySelector('#motion-offset');
+  const seconds=input.valueAsNumber;
+  if(!Number.isFinite(seconds)||!input.checkValidity()){result.textContent='請輸入有效的秒數，最多三位小數。';return}
+  if(rows.motion.some(row=>!Number.isFinite(row.t)||row.t+seconds<0||row.t+seconds>audio.duration)){
+   result.textContent='套用後有提示超出音檔範圍，請修正偏移量或個別時間。';return;
+  }
+  rows.motion=rows.motion.map(row=>({...row,t:Math.round((row.t+seconds)*1000)/1000}));
+  offset=0;save('motion');render();
+  document.querySelector('#motion-result').textContent='已套用偏移，請播放確認。';
+ };
+ document.querySelector('#motion-enter').onclick=()=>{
+  if(!analyzed||!media||!rows.motion.length||validation('motion').length)return;
+  pause();seek(0);motionStep='live';render();sync();
+ };
+}
 function paint(){
  const clock=document.querySelector('#clock');if(!clock)return;
  const page=route(),monitor=page==='monitor',connected=remote&&(performance.timeOrigin+performance.now())-remote.at<2000;
@@ -244,6 +280,11 @@ function paint(){
  play.disabled=page==='motion'?!media:!duration;
  play.textContent=running?'暫停':page==='motion'?'播放音樂':'開始計時';
  document.querySelector('#media-label').textContent=page==='motion'?[notice,media?'音樂長度 '+fmt(duration):notice?'':'請載入音樂以開始播放'].filter(Boolean).join(' · '):'流程長度 '+fmt(duration);
+ if(page==='motion'){
+  const analyze=document.querySelector('#motion-analyze'), enter=document.querySelector('#motion-enter');
+  if(analyze)analyze.disabled=!media||!rows.motion.length;
+  if(enter)enter.disabled=!media||!rows.motion.length||validation('motion').length>0;
+ }
  const check=document.querySelector('#validate');
  if(check){
   const key=page==='motion'?'motion':'shots';
@@ -253,7 +294,7 @@ function paint(){
  }
 
 }
-window.addEventListener('hashchange',()=>{pause();seek(0);render()});
+window.addEventListener('hashchange',()=>{pause();seek(0);if(route()!=='motion')motionStep='upload';render()});
 render();requestAnimationFrame(function frame(){paint();requestAnimationFrame(frame)});
 </script>
 </html>
