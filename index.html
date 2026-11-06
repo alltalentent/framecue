@@ -122,9 +122,11 @@ function bindFiles(){
 }
 function loadAudio(file){
   pause();media=false;duration=0;seek(0);if(audioURL)URL.revokeObjectURL(audioURL);
-  audioURL=typeof file==='string'?'':URL.createObjectURL(file);audio.src=audioURL||file;notice='正在讀取音樂…';
+  audioURL=typeof file==='string'?'':URL.createObjectURL(file);notice='正在讀取音樂…';
   audio.onloadedmetadata=()=>{if(!Number.isFinite(audio.duration)){notice='無法取得音樂長度';return}media=true;notice=typeof file==='string'?'已載入連結音檔':file.name;if(route()==='motion'){duration=audio.duration;seek(0);paint()}};
-  audio.onerror=()=>{media=false;duration=0;seek(0);notice='音檔讀取失敗，請重新選擇音檔';paint()};
+  audio.onerror=()=>{media=false;duration=0;seek(0);notice=typeof file==='string'?'連結無法直接播放。請確認可下載，或下載後選擇本機音檔。':'無法播放這個音檔。請確認檔案能在手機播放，或改用 MP3。';paint()};
+  audio.src=audioURL||file;
+  audio.load();
 }
 function importLyrics(source){
    const [header,...data]=csvRows(source.replace(/^\uFEFF/,''));
@@ -154,6 +156,7 @@ function driveDownload(input){
   if(fileId&&/^[\w-]+$/.test(fileId)){
    const target=new URL('https://drive.usercontent.google.com/download');
    target.searchParams.set('id',fileId);target.searchParams.set('export','download');
+   target.searchParams.set('confirm','t');
    if(url.searchParams.has('resourcekey'))target.searchParams.set('resourcekey',url.searchParams.get('resourcekey'));
    return target.href;
   }
@@ -204,7 +207,7 @@ function paint(){
  const play=document.querySelector('#play');
  play.disabled=page==='motion'?!media:!duration;
  play.textContent=running?'暫停':page==='motion'?'播放音樂':'開始計時';
- document.querySelector('#media-label').textContent=page==='motion'?[notice,media?'音樂長度 '+fmt(duration):'請載入音樂以開始播放'].filter(Boolean).join(' · '):'流程長度 '+fmt(duration);
+ document.querySelector('#media-label').textContent=page==='motion'?[notice,media?'音樂長度 '+fmt(duration):notice?'':'請載入音樂以開始播放'].filter(Boolean).join(' · '):'流程長度 '+fmt(duration);
  const check=document.querySelector('#validate');
  if(check){
   const key=page==='motion'?'motion':'shots';
