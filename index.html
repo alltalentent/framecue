@@ -6,7 +6,7 @@
 :root{color-scheme:dark;--bg:#0d1117;--panel:#151b23;--line:#2b3542;--ink:#f4f4ef;--muted:#aab1b7;--brand:#67b3d2}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,sans-serif}a{color:inherit;text-decoration:none}header,footer{border-block-end:1px solid var(--line);padding:18px max(5vw,calc((100vw - 1160px)/2));display:flex;justify-content:space-between;align-items:center;gap:16px}header a{font-weight:850;letter-spacing:-.04em;font-size:24px}header a span,.accent{color:var(--brand)}small,.muted{color:var(--muted)}main{max-width:1160px;margin:auto;padding:clamp(24px,5vw,64px) 24px}.hero{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(105deg,#202622 18%,#131914 100%);padding:clamp(28px,6vw,72px);border:1px solid #404c36;border-radius:22px}.hero svg{position:absolute;z-index:-1;right:-80px;top:0;width:min(70%,670px);height:100%;opacity:.38}.hero h1{font-size:clamp(42px,8vw,91px);letter-spacing:-.075em;line-height:1.05;margin:20px 0}.tag{font:700 12px monospace;letter-spacing:.15em;color:var(--brand)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px}.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}.card:hover{border-color:var(--brand)}h2{margin-bottom:8px}.card p{color:var(--muted);min-height:52px}.button,button,input,select{font:inherit;border-radius:8px;padding:9px 13px;border:1px solid var(--line);background:#23272b;color:var(--ink)}button,.button{cursor:pointer;display:inline-block}.primary{background:var(--brand);color:#0d1117;font-weight:800}.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}.bar>*{max-width:100%}.clock{font:clamp(30px,7vw,64px) monospace;font-variant-numeric:tabular-nums}.readout{display:grid;gap:12px;margin:16px 0}.current{background:var(--brand);color:#0d1117;border-radius:16px;padding:22px}.next{border:1px solid var(--line);border-radius:16px;padding:22px}.current strong,.next strong{display:block;overflow-wrap:anywhere;font-size:clamp(34px,7vw,78px);line-height:1.18}.next strong{font-size:clamp(26px,5vw,52px)}.table{overflow:auto;margin-top:14px}table{border-collapse:collapse;width:100%;white-space:nowrap}td,th{text-align:left;border-bottom:1px solid var(--line);padding:9px}td input{width:120px}td input[data-key=note]{width:220px}input[type=range],audio{width:100%}label{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}footer{border-block-start:1px solid var(--line);border-block-end:0;font-size:13px;color:var(--muted)}@media(max-width:560px){header,footer{padding:14px}.hero svg{width:95%;opacity:.2}main{padding-inline:14px}}
 .lyrics{position:relative;max-height:45vh;overflow:auto;list-style:none;padding:0;margin:0}.lyrics li{display:grid;grid-template-columns:4em 1fr;gap:12px;padding:10px;border-bottom:1px solid var(--line)}.lyrics li[aria-current]{background:#213746;border-left:3px solid var(--brand)}.lyrics time{font-family:monospace}.lyrics strong,.lyrics small,.lyrics .lyric{display:block}.lyric{white-space:pre-wrap;overflow-wrap:anywhere;font-size:1.1rem}.lyrics li:last-child{margin-bottom:40vh}textarea{background:#23272b;color:var(--ink);border:1px solid var(--line);border-radius:8px;font:inherit;width:210px;padding:8px}.tool-list{border-top:1px solid var(--line)}.tool-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px 14px;padding:18px 4px;border-bottom:1px solid var(--line)}.tool-row .tag,.tool-row p{grid-column:1}.tool-row h2,.tool-row p{margin:0}.tool-row p{color:var(--muted)}.tool-row>.accent{grid-column:2;grid-row:1 / 4}.tool-row:hover h2{color:var(--brand)}.source-tools{margin-top:14px}.source-tools input[type=url]{width:min(420px,100%)}.source-tools output{display:block;white-space:pre-wrap}.brand-logo{display:block;width:clamp(116px,21vw,176px);height:auto}.tool-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,295px),1fr));gap:16px;border:0}.tool-row{align-content:center;min-height:200px;padding:24px;background:var(--panel);border:1px solid var(--line);border-radius:16px}.tool-row:hover,.tool-row:focus-visible{border-color:var(--brand)}.link-form output{flex-basis:100%}.cue-columns,.lyrics li{display:grid;grid-template-columns:minmax(5em,1fr) minmax(7em,1fr) minmax(12em,3fr) minmax(9em,2fr);gap:12px}.cue-columns{padding:10px;color:var(--muted);font-size:.85rem}.lyrics{max-height:65vh}.lyrics li>strong{color:var(--brand)}.cue-note{white-space:pre-wrap;overflow-wrap:anywhere}.lyrics .cue-out time{color:#ffb56c}@media(max-width:650px){.cue-columns,.lyrics li{grid-template-columns:minmax(3em,1fr) minmax(5.7em,1fr) minmax(5em,2fr) minmax(4em,1.5fr);gap:6px;padding-inline:5px;font-size:.82rem}.lyrics .lyric{font-size:inherit}}button[aria-pressed=true]{background:var(--brand);color:var(--bg)}.lyrics::before,.lyrics::after{content:"";display:block;height:50%}.lyrics li:last-child{margin-bottom:0}.operator{position:fixed;inset:0;z-index:5;max-width:none;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);padding:8px max(12px,env(safe-area-inset-right))}.operator h1{font-size:1rem;margin:2px 0}.operator>p{display:none}.operator .clock{font-size:clamp(20px,5vw,38px)}.operator .panel{padding:8px 10px}.operator .panel:last-child{flex:1;min-height:0;display:flex;flex-direction:column}.operator .panel:last-child h2,.operator #cue-now{display:none}.operator .lyrics{flex:1;max-height:none;min-height:0}.operator .bar{margin:3px 0}.operator button,.operator .button{padding:4px 8px}@media(max-height:520px){.operator .tag,.operator #media-label{display:none}.operator h1{display:none}}dialog{max-width:min(540px,94vw);background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px}dialog label{display:grid;gap:5px;margin:10px 0}dialog textarea{width:100%}dialog::backdrop{background:#0009}.lyrics button.cue-note{text-align:left;padding:0;background:transparent;border:0;font-size:inherit;color:inherit;min-width:0}.tool-list{gap:20px}.tool-row{background:linear-gradient(145deg,#1a2936,var(--panel) 70%);border-radius:18px}.tool-row .accent{font-size:1.4rem}.operator{background:radial-gradient(ellipse at top,#172c3d,var(--bg) 60%)}.operator .panel:last-child{border-color:#33485a;background:#111b25}.operator .lyrics li{align-items:center;min-height:54px}.operator .lyrics li>strong{font-size:clamp(1rem,4vw,1.55rem);line-height:1.2;overflow-wrap:anywhere}.operator .lyrics li[aria-current]{background:linear-gradient(90deg,#244457,#192b39);box-shadow:inset 0 0 0 1px #385b70}.operator .cue-columns{font-weight:700}.monitor-controls button{min-height:38px}.operator.focus-view>a,.operator:fullscreen>a{display:none}</style>
 <header><a href="#" aria-label="群能娛樂 FrameCue 首頁"><img class="brand-logo" alt="群能娛樂" src="data:image/png;base64,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"></a><small>FrameCue · 現場製作工作台</small></header>
-<main id="app"></main>
+<div class="bar" style="padding:0 24px"><button id="cloud-account">雲端登入</button><span id="cloud-label" class="muted"></span></div><main id="app"></main>
 <footer><span>FRAMECUE / SHOW PRODUCTION</span><span>FRAMECUE</span></footer>
 <script type="module">
 const rows=Object.fromEntries(['motion','shots'].map(key=>{
@@ -27,6 +27,10 @@ function sync(){
  const cues=sorted('motion').map(row=>({...row,id:rows.motion.indexOf(row)}));
  const state={t:now(),playing:running&&!audio.seeking&&audio.readyState>=3,at:performance.timeOrigin+performance.now(),duration,rows:cues,epoch,loop:audio.loop};
  channel.postMessage(state);
+ if(cloudReady&&performance.now()-cloudSent>=300){
+  cloudSent=performance.now();
+  sendCloud(state);
+ }
  if(wire?.readyState==='open'&&wire.bufferedAmount<65536){
   const serialized=JSON.stringify(cues);
   wire.send(JSON.stringify({...state,rows:serialized===sentRows?undefined:cues}));
@@ -61,7 +65,7 @@ function receiveState(data,paired=false){
 channel.onmessage=({data})=>receiveState(data);
 let playbackRequest=0,epoch=0,monitorTime=0,monitorEpoch,previousRemoteTime=0;
 async function controlPlayback(command){
- if(command==='loop'){audio.loop=!audio.loop;sync();return}
+ if(command==='loop'){audio.loop=!audio.loop;sync();saveProjectQuietly();return}
  const request=++playbackRequest;
  if(command==='toggle'&&!audio.paused){pause();sync();return}
  if(now()>=duration)seek(0);
@@ -136,11 +140,13 @@ function render(){
  if(!['motion','shots','run','monitor'].includes(page)){app.innerHTML=home();return}
  const titles={motion:'運鏡提示器',shots:'多機鏡位編排',run:'現場導播 Run Show',monitor:'攝影提示端'};
  const desc={motion:'主控端 · 匯入歌詞分配表及伴奏，排定拍攝提示',shots:'為每個時間點指定攝影機、拍攝對象與景別',run:'跟著時間軸提示切鏡，也能手動按 GO',monitor:'跟隨控制端的音樂進度'};
- app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="clock" id="clock"></div><div class="bar"><button id="pair-open">連接主控</button><button id="monitor-full" aria-pressed="false">全螢幕</button><span id="monitor-status" class="muted"></span></div><div class="bar monitor-controls"><button class="primary" id="remote-play" disabled>播放</button><button data-transport="restart" disabled>回到開頭播放</button><button data-transport="loop" aria-pressed="false" disabled>循環播放</button></div>'+readout():transport(key)+(page==='motion'&&motionStep==='upload'?editor(key):'')+(page==='motion'?motionControls():'')+(page!=='shots'&&(page!=='motion'||motionStep!=='upload')?readout():'')+(page==='run'||(page==='motion'&&motionStep!=='review')?'':editor(key)));
+ app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="clock" id="clock"></div><div class="bar"><button class="operator-cloud">雲端帳號</button><button id="pair-open">連接主控</button><button id="monitor-full" aria-pressed="false">全螢幕</button><span id="monitor-status" class="muted"></span></div><div class="bar monitor-controls"><button class="primary" id="remote-play" disabled>播放</button><button data-transport="restart" disabled>回到開頭播放</button><button data-transport="loop" aria-pressed="false" disabled>循環播放</button></div>'+readout():transport(key)+(page==='motion'&&motionStep==='upload'?editor(key):'')+(page==='motion'?motionControls():'')+(page!=='shots'&&(page!=='motion'||motionStep!=='upload')?readout():'')+(page==='run'||(page==='motion'&&motionStep!=='review')?'':editor(key)));
+ app.querySelector('.operator-cloud')?.addEventListener('click',()=>{if(cloudClient){if(cloudUser)alert('已登入 '+cloudUser.email);else cloudAccountDialog()}});
  if(page==='monitor'){
   document.querySelector('#pair-open').onclick=()=>pairDialog(false);
   const send=transport=>{
    if(wire?.readyState==='open')wire.send(JSON.stringify({transport}));
+   else sendCloud({transport});
   };
   document.querySelector('#remote-play').onclick=()=>send(remote?.playing?'pause':'play');
   for(const button of app.querySelectorAll('[data-transport]'))button.onclick=()=>send(button.dataset.transport);
@@ -159,9 +165,9 @@ function render(){
  const go=document.querySelector('#go');
  if(go)go.onclick=()=>{const next=sorted('shots').find(r=>r.t>now()+.001);if(next){pause();seek(next.t)}};
  if(document.querySelector('#add')){
-  document.querySelector('#add').onclick=()=>{rows[key].push({t:+now().toFixed(3),name:'',note:'',lead:3});save(key);render();app.querySelector('tbody tr:last-child input[data-key=name]').focus()};
-  for(const input of app.querySelectorAll('[data-key]'))input.onchange=()=>{const k=input.dataset.key;rows[key][input.dataset.row][k]=k==='t'?parseTime(input.value):k==='lead'?(input.value.trim()?Number(input.value):null):input.value;save(key);paint()};
-  for(const button of app.querySelectorAll('[data-delete]'))button.onclick=()=>{rows[key].splice(+button.dataset.delete,1);save(key);render()};
+  document.querySelector('#add').onclick=()=>{rows[key].push({t:+now().toFixed(3),name:'',note:'',lead:3});save(key);if(key==='motion')saveProjectQuietly();render();app.querySelector('tbody tr:last-child input[data-key=name]').focus()};
+  for(const input of app.querySelectorAll('[data-key]'))input.onchange=()=>{const k=input.dataset.key;rows[key][input.dataset.row][k]=k==='t'?parseTime(input.value):k==='lead'?(input.value.trim()?Number(input.value):null):input.value;save(key);if(key==='motion')saveProjectQuietly();paint()};
+  for(const button of app.querySelectorAll('[data-delete]'))button.onclick=()=>{rows[key].splice(+button.dataset.delete,1);save(key);if(key==='motion')saveProjectQuietly();render()};
   for(const button of app.querySelectorAll('[data-mark]'))button.onclick=()=>{
    if(!media)return;
    const index=+button.dataset.mark;
@@ -312,7 +318,7 @@ function bindSources(){
  }
 }
 function motionControls(){
- if(motionStep==='live')return '<div class="bar"><button id="motion-back">返回確認</button><button id="pair-open">連接攝影手機</button><button id="project-save">儲存專案</button><button id="project-export">匯出專案檔</button><span id="project-status" role="status"></span></div>';
+ if(motionStep==='live')return '<div class="bar"><button id="motion-back">返回確認</button><button class="operator-cloud">雲端帳號</button><button id="pair-open">連接攝影手機</button><button id="project-save">儲存專案</button><button id="project-export">匯出專案檔</button><span id="project-status" role="status"></span></div>';
  if(motionStep==='upload')return '<section class="panel"><div class="tag">03 確認時間</div><p>載入音樂與歌詞後，可在這台裝置辨識人聲，找出歌詞的開口時間。</p><button class="primary" id="motion-analyze">自動對齊歌詞</button> <button id="motion-manual">手動確認時間</button><button id="project-open">開啟已存專案</button><label>匯入專案檔 <input type="file" id="project-import" accept=".framecue"></label><p id="analysis-status" role="status"></p></section>';
  return `<section class="panel"><div class="tag">03 確認時間</div><p>邊播放邊調整偏移，清單會立即更新。提示太晚就輸入負值，太早就輸入正值。超出音檔的提示會保留並標記。</p><div class="bar"><label>整體偏移（秒） <input type="number" step=".1" id="motion-offset" value="${offset}"></label><button id="motion-apply">套用偏移</button><button id="motion-back">返回載入</button><button class="primary" id="motion-enter">確認並進入提示器</button></div><output id="motion-result" class="muted"></output></section>`;
 }
@@ -365,6 +371,7 @@ function bindMotion(){
    try{
     await projectAccess(snapshot(name,id));
     projectId=id;projectName=name;status.textContent='已儲存「'+name+'」';
+    if(cloudUser)await queueCloudSave(snapshot(name,id),status);
    }catch{status.textContent='儲存失敗，請確認瀏覽器有足夠空間。'}
   };
   document.querySelector('#project-export').onclick=exportProject;
@@ -381,7 +388,7 @@ function bindMotion(){
  const applyOffset=()=>{
   rows.motion=rows.motion.map(row=>Number.isFinite(row.t)?{...row,t:shiftCue(row.t,offset)}:row);
   offset=0;
-  save('motion');
+  save('motion');saveProjectQuietly();
  };
  document.querySelector('#motion-apply').onclick=()=>{
   applyOffset();
@@ -500,12 +507,12 @@ function paint(){
   const status=document.querySelector('#monitor-status');
   const linked=wire?.readyState==='open';
   const state=peer?.connectionState;
-  const message=linked?(connected?'跨裝置已連線':'已配對 · 等待主控進度'):(connected?'同一瀏覽器已連線':state==='failed'||state==='disconnected'?'連線中斷 · 可重新配對':'等待主控連線');
+  const message=linked?(connected?'跨裝置已連線':'已配對 · 等待主控進度'):(connected?(cloudReady?'雲端已連線':'同一瀏覽器已連線'):state==='failed'||state==='disconnected'?'連線中斷 · 可重新配對':'等待主控連線');
   if(status.textContent!==message)status.textContent=message;
   const play=document.querySelector('#remote-play');
   const label=remote?.playing?'暫停':'播放';
   if(play.textContent!==label)play.textContent=label;
-  play.disabled=!linked||!connected;
+  play.disabled=(!linked&&!cloudReady)||!connected;
   document.querySelector('[data-transport=restart]').disabled=play.disabled;
   paintLoop(document.querySelector('[data-transport=loop]'),!!remote?.loop,play.disabled);
   const full=document.querySelector('#monitor-full');
@@ -571,17 +578,33 @@ function restoreProject(project){
 async function openProjectPicker(){
  const status=document.querySelector('#analysis-status');
  try{
-  const projects=await projectAccess();
+  const local=await projectAccess();
+  const cloud=cloudUser?await cloudClient.from('framecue_projects').select('id,name,cues,audio_path,audio_url,loop').order('updated_at',{ascending:false}):null;
+  if(cloud?.error)throw cloud.error;
+  const online=cloud?.data||[];
+  const projects=[...online.map(project=>({...project,cloud:true})),...local.filter(project=>!online.some(onlineProject=>onlineProject.id===project.id))];
   if(!status.isConnected)return;
   if(!projects.length){status.textContent='這台裝置還沒有已存專案。';return}
   const dialog=document.createElement('dialog');
   dialog.innerHTML='<form method="dialog"><label>選擇專案<select></select></label><div class="bar"><button value="cancel">取消</button><button class="primary" value="open">開啟</button></div></form>';
   const select=dialog.querySelector('select');
-  projects.forEach((project,index)=>select.add(new Option(project.name||'先前儲存的專案',index)));
-  dialog.onclose=()=>{
+  projects.forEach((project,index)=>select.add(new Option((project.name||'先前儲存的專案')+(project.cloud?' · 雲端':''),index)));
+  dialog.onclose=async()=>{
    if(dialog.returnValue==='open'){
     const project=projects[+select.value];
-    restoreProject({...project,name:project.name||'先前儲存的專案'});
+    try{
+     if(project.cloud){
+      project.audio=project.audio_url;
+      if(project.audio_path){
+       const {data,error}=await cloudClient.storage.from('framecue-audio').download(project.audio_path);
+       if(error)throw error;
+       project.audio=new File([data],project.name,{type:data.type});
+       cloudAudio.set(project.id,{source:project.audio,path:project.audio_path});
+      }
+     }
+     if(status.isConnected)restoreProject({...project,name:project.name||'先前儲存的專案'});
+    }catch{status.textContent='無法下載雲端專案音檔。'}
+
    }
    dialog.remove();
   };
@@ -612,6 +635,7 @@ async function readProjectFile(file){
  return project;
 }
 function saveProjectQuietly(){
+ if(projectId&&cloudUser)queueCloudSave(snapshot(projectName,projectId),document.querySelector('#project-status')).catch(()=>{});
  if(projectId)projectAccess(snapshot(projectName,projectId)).catch(()=>{
   const status=document.querySelector('#project-status');
   if(status)status.textContent='自動儲存失敗，請再次儲存專案。';
@@ -634,6 +658,7 @@ app.addEventListener('click',event=>{
    if(route()==='monitor'){
     if(!remote||performance.timeOrigin+performance.now()-remote.at>=2000){alert('與控制端的連線已中斷，請重新連線後再編輯。');dialog.remove();return}
     if(wire?.readyState==='open')wire.send(JSON.stringify(data));
+    else if(cloudReady)sendCloud(data);
     else if(!peer)channel.postMessage(data);
     else alert('與控制端的連線已中斷，請重新配對後再儲存。');
    }else receiveState(data,true);
@@ -708,6 +733,99 @@ function pairDialog(master){
  dialog.onclose=()=>dialog.remove();
  document.body.append(dialog);dialog.showModal();
 }
+const cloudUrl='https://batgisvywfllaoxssgly.supabase.co';
+const cloudKey='sb_publishable_qRed-7K0geIR0IKlXCrSMw_65_5sYLz';
+let cloudClient,cloudUser,cloudRoom,cloudReady=false,cloudSent=0;
+const cloudAudio=new Map();
+let cloudWrites=Promise.resolve();
+function sendCloud(payload){
+ if(cloudReady)cloudRoom.send({type:'broadcast',event:'framecue',payload}).catch(()=>{});
+}
+async function connectCloud(){
+ if(!cloudClient)return;
+ const oldRoom=cloudRoom;
+ cloudRoom=null;cloudReady=false;
+ if(oldRoom)await cloudClient.removeChannel(oldRoom);
+ if(!cloudUser)return;
+ await cloudClient.realtime.setAuth();
+ const room=cloudClient.channel('framecue:'+cloudUser.id,{config:{private:true}});
+ cloudRoom=room;
+ room.on('broadcast',{event:'framecue'},({payload})=>receiveState(payload,true));
+ room.subscribe(status=>{
+  if(cloudRoom!==room)return;
+  cloudReady=status==='SUBSCRIBED';
+  document.querySelector('#cloud-label').textContent=cloudReady?'雲端已連線':'雲端連線 '+status;
+  if(cloudReady&&route()==='monitor')sendCloud({requestState:true});
+ });
+}
+function queueCloudSave(project,status){
+ const user=cloudUser;
+ const write=cloudWrites.catch(()=>{}).then(async()=>{
+  if(!user||cloudUser?.id!==user.id)throw Error();
+  if(status)status.textContent='正在同步雲端…';
+  let path=null;
+  if(project.audio instanceof Blob){
+   const cached=cloudAudio.get(project.id);
+   if(cached?.source===project.audio)path=cached.path;
+   else{
+    path=user.id+'/'+project.id+'/'+crypto.randomUUID();
+    const {error}=await cloudClient.storage.from('framecue-audio').upload(path,project.audio);
+    if(error)throw error;
+    cloudAudio.set(project.id,{source:project.audio,path});
+   }
+  }
+  const {error}=await cloudClient.from('framecue_projects').upsert({id:project.id,owner:user.id,name:project.name,cues:project.cues,audio_path:path,audio_url:typeof project.audio==='string'?project.audio:null,loop:project.loop,updated_at:new Date().toISOString()});
+  if(error)throw error;
+  if(status)status.textContent='已同步「'+project.name+'」';
+ }).catch(error=>{
+  if(status)status.textContent='雲端同步失敗，專案仍保存在這台裝置。';
+  throw error;
+ });
+ cloudWrites=write;
+ return write;
+}
+function cloudAccountDialog(){
+ const dialog=document.createElement('dialog');
+ dialog.innerHTML='<form><h2>FrameCue 雲端帳號</h2><p>兩台裝置登入同一帳號。控制端開啟提示器後，另一台打開攝影提示端即可跟隨。</p><label>電子郵件<input name="email" type="email" required></label><label>密碼<input name="password" type="password" minlength="8" required></label><div class="bar"><button value="signin">登入</button><button value="signup">建立帳號</button><button type="button" id="close-cloud">關閉</button></div><output role="status"></output></form>';
+ const form=dialog.querySelector('form'), status=dialog.querySelector('output');
+ form.onsubmit=async event=>{
+  event.preventDefault();
+  const data=new FormData(form);
+  const credentials={email:data.get('email'),password:data.get('password')};
+  const buttons=form.querySelectorAll('button[value]');
+  buttons.forEach(button=>button.disabled=true);
+  try{
+   const signup=event.submitter?.value==='signup';
+   const result=signup?await cloudClient.auth.signUp({...credentials,options:{emailRedirectTo:location.origin+location.pathname}}):await cloudClient.auth.signInWithPassword(credentials);
+   if(result.error){status.textContent=result.error.message;return}
+   if(result.data.session)dialog.close();
+   else status.textContent='請到信箱完成驗證，再回來登入。';
+  }catch{status.textContent='無法連接雲端帳號服務。'}
+  finally{buttons.forEach(button=>button.disabled=false)}
+ };
+ dialog.querySelector('#close-cloud').onclick=()=>dialog.close();
+ dialog.onclose=()=>dialog.remove();
+ document.body.append(dialog);dialog.showModal();
+}
+async function initCloud(){
+ const button=document.querySelector('#cloud-account'),label=document.querySelector('#cloud-label');
+ button.disabled=true;
+ try{
+  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm');
+  cloudClient=createClient(cloudUrl,cloudKey);
+  button.onclick=()=>cloudUser?cloudClient.auth.signOut():cloudAccountDialog();
+  cloudClient.auth.onAuthStateChange((event,session)=>{
+   const next=session?.user||null;
+   if(cloudUser?.id!==next?.id){
+    cloudUser=next;
+    setTimeout(()=>connectCloud().catch(()=>{label.textContent='雲端連線失敗'}),0);
+   }
+   button.textContent=cloudUser?'登出雲端':'雲端登入';
+   if(!cloudUser)label.textContent='';
+  });
+ }catch{label.textContent='暫時無法載入雲端服務'}
+ finally{button.disabled=!cloudClient}
+}
 const sharedCues=new URLSearchParams(location.hash.split('?')[1]).get('cues');
 if(route()==='motion'&&sharedCues){
  try{
@@ -719,6 +837,6 @@ if(route()==='motion'&&sharedCues){
  }catch{}
 }
 window.addEventListener('hashchange',()=>{pause();seek(0);if(route()!=='motion')motionStep='upload';render()});
-render();requestAnimationFrame(function frame(){paint();requestAnimationFrame(frame)});
+render();initCloud();requestAnimationFrame(function frame(){paint();requestAnimationFrame(frame)});
 </script>
 </html>
