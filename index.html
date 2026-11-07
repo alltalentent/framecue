@@ -1,3 +1,4 @@
+200:  sourceAudio=file;projectId=null;projectName='';
 <!doctype html>
 <html lang="zh-Hant">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -208,7 +209,7 @@ function bindFiles(){
 
 }
 function loadAudio(file){
-  sourceAudio=file;savedProject=false;
+  sourceAudio=file;projectId=null;projectName='';
   analyzed=false;offset=0;
   pause();media=false;duration=0;seek(0);if(audioURL)URL.revokeObjectURL(audioURL);
   audioURL=typeof file==='string'?'':URL.createObjectURL(file);notice='正在讀取音樂…';
@@ -312,27 +313,22 @@ function bindSources(){
  }
 }
 function motionControls(){
- if(motionStep==='live')return '<div class="bar"><button id="motion-back">返回確認</button><button id="pair-open">連接攝影手機</button><button id="project-save">儲存專案</button><span id="project-status" role="status"></span></div>';
- if(motionStep==='upload')return '<section class="panel"><div class="tag">03 確認時間</div><p>載入音樂與歌詞後，可在這台裝置辨識人聲，找出歌詞的開口時間。</p><button class="primary" id="motion-analyze">自動對齊歌詞</button> <button id="motion-manual">手動確認時間</button><button id="project-open">開啟已存專案</button><p id="analysis-status" role="status"></p></section>';
+ if(motionStep==='live')return '<div class="bar"><button id="motion-back">返回確認</button><button id="pair-open">連接攝影手機</button><button id="project-save">儲存專案</button><button id="project-export">匯出專案檔</button><span id="project-status" role="status"></span></div>';
+ if(motionStep==='upload')return '<section class="panel"><div class="tag">03 確認時間</div><p>載入音樂與歌詞後，可在這台裝置辨識人聲，找出歌詞的開口時間。</p><button class="primary" id="motion-analyze">自動對齊歌詞</button> <button id="motion-manual">手動確認時間</button><button id="project-open">開啟已存專案</button><label>匯入專案檔 <input type="file" id="project-import" accept=".framecue"></label><p id="analysis-status" role="status"></p></section>';
  return `<section class="panel"><div class="tag">03 確認時間</div><p>邊播放邊調整偏移，清單會立即更新。提示太晚就輸入負值，太早就輸入正值。超出音檔的提示會保留並標記。</p><div class="bar"><label>整體偏移（秒） <input type="number" step=".1" id="motion-offset" value="${offset}"></label><button id="motion-apply">套用偏移</button><button id="motion-back">返回載入</button><button class="primary" id="motion-enter">確認並進入提示器</button></div><output id="motion-result" class="muted"></output></section>`;
 }
 function bindMotion(){
  if(motionStep==='upload'){
   bindFiles();bindSources();
-  document.querySelector('#project-open').onclick=async()=>{
+  document.querySelector('#project-open').onclick=openProjectPicker;
+  document.querySelector('#project-import').onchange=async event=>{
+   const file=event.target.files[0];
+   if(!file)return;
    const status=document.querySelector('#analysis-status');
    try{
-    const project=await projectAccess(false);
-    if(!status.isConnected)return;
-    if(!project){status.textContent='這台裝置還沒有已存專案。';return}
-    rows.motion=project.cues;
-    loadAudio(project.audio);
-    audio.addEventListener('loadedmetadata',()=>{
-     if(route()!=='motion'||!media)return;
-     audio.loop=!!project.loop;
-     analyzed=true;motionStep='live';savedProject=true;render();sync();
-    },{once:true});
-   }catch{status.textContent='無法開啟已存專案。'}
+    const project=await readProjectFile(file);
+    if(status.isConnected)restoreProject(project);
+   }catch{status.textContent='無法讀取專案檔，請選擇完整的 .framecue 檔案。'}
   };
   const review=message=>{
    analyzed=true;motionStep='review';pause();render();
@@ -364,9 +360,15 @@ function bindMotion(){
   document.querySelector('#pair-open').onclick=()=>pairDialog(true);
   document.querySelector('#project-save').onclick=async()=>{
    const status=document.querySelector('#project-status');
-   try{await projectAccess(true);savedProject=true;status.textContent='專案已儲存'}
-   catch{status.textContent='儲存失敗，請確認瀏覽器有足夠空間。'}
+   const name=prompt('專案名稱',projectName)?.trim();
+   if(!name)return;
+   const id=name===projectName&&projectId?projectId:crypto.randomUUID();
+   try{
+    await projectAccess(snapshot(name,id));
+    projectId=id;projectName=name;status.textContent='已儲存「'+name+'」';
+   }catch{status.textContent='儲存失敗，請確認瀏覽器有足夠空間。'}
   };
+  document.querySelector('#project-export').onclick=exportProject;
   return;
  }
 
@@ -535,25 +537,83 @@ function paint(){
  }
 
 }
-let sourceAudio,savedProject=false;
-function projectAccess(write){
- const snapshot=write?{cues:structuredClone(rows.motion),audio:sourceAudio,loop:audio.loop}:null;
+let sourceAudio,projectId=null,projectName='';
+function snapshot(name,id){
+ return {id,name,cues:structuredClone(rows.motion),audio:sourceAudio,loop:audio.loop};
+}
+function projectAccess(project){
  return new Promise((resolve,reject)=>{
   const request=indexedDB.open('framecue-projects',1);
   request.onupgradeneeded=()=>request.result.createObjectStore('projects');
   request.onerror=()=>reject(request.error);
   request.onsuccess=()=>{
    const db=request.result;
-   const tx=db.transaction('projects',write?'readwrite':'readonly');
+   const tx=db.transaction('projects',project?'readwrite':'readonly');
    const store=tx.objectStore('projects');
-   const operation=write?store.put(snapshot,'last'):store.get('last');
+   const operation=project?store.put(project,project.id):store.getAll();
    tx.oncomplete=()=>{db.close();resolve(operation.result)};
    tx.onabort=()=>{db.close();reject(tx.error)};
   };
  });
 }
+function restoreProject(project){
+ const status=document.querySelector('#analysis-status');
+ status.textContent='正在開啟「'+project.name+'」…';
+ loadAudio(project.audio);
+ const source=audio.src;
+ audio.addEventListener('loadedmetadata',()=>{
+  if(!status.isConnected||audio.src!==source||!media)return;
+  rows.motion=project.cues;
+  projectId=project.id||null;projectName=project.name;
+  audio.loop=!!project.loop;
+  analyzed=true;motionStep='live';render();sync();
+ },{once:true});
+}
+async function openProjectPicker(){
+ const status=document.querySelector('#analysis-status');
+ try{
+  const projects=await projectAccess();
+  if(!status.isConnected)return;
+  if(!projects.length){status.textContent='這台裝置還沒有已存專案。';return}
+  const dialog=document.createElement('dialog');
+  dialog.innerHTML='<form method="dialog"><label>選擇專案<select></select></label><div class="bar"><button value="cancel">取消</button><button class="primary" value="open">開啟</button></div></form>';
+  const select=dialog.querySelector('select');
+  projects.forEach((project,index)=>select.add(new Option(project.name||'先前儲存的專案',index)));
+  dialog.onclose=()=>{
+   if(dialog.returnValue==='open'){
+    const project=projects[+select.value];
+    restoreProject({...project,name:project.name||'先前儲存的專案'});
+   }
+   dialog.remove();
+  };
+  document.body.append(dialog);dialog.showModal();
+ }catch{status.textContent='無法讀取已存專案。'}
+}
+function exportProject(){
+ const name=prompt('匯出專案名稱',projectName||'FrameCue 專案')?.trim();
+ if(!name)return;
+ const project=snapshot(name,null);
+ const mediaFile=project.audio instanceof Blob?project.audio:null;
+ const header=new TextEncoder().encode(JSON.stringify({...project,audio:mediaFile?null:project.audio,mediaType:mediaFile?.type,mediaName:mediaFile?.name,version:1}));
+ const length=new Uint8Array(4);
+ new DataView(length.buffer).setUint32(0,header.length);
+ const url=URL.createObjectURL(new Blob(mediaFile?[length,header,mediaFile]:[length,header],{type:'application/octet-stream'}));
+ const link=document.createElement('a');link.href=url;link.download=name+'.framecue';link.click();
+ setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+async function readProjectFile(file){
+ const length=new DataView(await file.slice(0,4).arrayBuffer()).getUint32(0);
+ if(!length||length>Math.min(file.size-4,5000000))throw Error();
+ const project=JSON.parse(await file.slice(4,4+length).text());
+ if(project.version!==1||typeof project.name!=='string'||!Array.isArray(project.cues)||!project.cues.every(row=>row&&typeof row.name==='string'))throw Error();
+ if(!project.audio){
+  if(file.size===4+length)throw Error();
+  project.audio=new File([file.slice(4+length)],project.mediaName||'專案音檔',{type:project.mediaType||''});
+ }else if(new URL(project.audio).protocol!=='https:')throw Error();
+ return project;
+}
 function saveProjectQuietly(){
- if(savedProject)projectAccess(true).catch(()=>{
+ if(projectId)projectAccess(snapshot(projectName,projectId)).catch(()=>{
   const status=document.querySelector('#project-status');
   if(status)status.textContent='自動儲存失敗，請再次儲存專案。';
  });
@@ -605,7 +665,7 @@ async function gatherDescription(connection,description){
 }
 function pairDialog(master){
  const dialog=document.createElement('dialog');
- dialog.innerHTML=`<form method="dialog"><h2>跨裝置配對</h2><p>兩台裝置請連到同一個 Wi-Fi，配對後可以關閉此視窗，請保留控制端與提示端網頁。</p><p>${master?'產生配對碼，貼到手機的「連接主控」。再把手機的回覆碼貼回這裡。':'貼上控制端產生的配對碼，再把回覆碼貼回控制端。'}</p><label>${master?'回覆碼':'配對碼'}<textarea id="pair-input" rows="3"></textarea></label><label>${master?'配對碼':'回覆碼'}<textarea id="pair-output" readonly rows="3"></textarea></label><div class="bar">${master?'<button type="button" id="pair-create">產生配對碼</button>':''}<button type="button" id="pair-accept">${master?'完成配對':'產生回覆碼'}</button><button type="button" id="pair-copy">複製產生的碼</button><button>關閉配對視窗</button></div><output role="status"></output></form>`;
+ dialog.innerHTML=`<form method="dialog"><h2>跨裝置配對</h2><p>兩台裝置請連到同一個可互通的 Wi-Fi。手機熱點若無法配對，請改用共同 Wi-Fi。配對後可關閉此視窗，請保留兩端網頁。</p><p>${master?'產生配對碼，貼到手機的「連接主控」。再把手機的回覆碼貼回這裡。':'貼上控制端產生的配對碼，再把回覆碼貼回控制端。'}</p><label>${master?'回覆碼':'配對碼'}<textarea id="pair-input" rows="3"></textarea></label><label>${master?'配對碼':'回覆碼'}<textarea id="pair-output" readonly rows="3"></textarea></label><div class="bar">${master?'<button type="button" id="pair-create">產生配對碼</button>':''}<button type="button" id="pair-accept">${master?'完成配對':'產生回覆碼'}</button><button type="button" id="pair-copy">複製產生的碼</button><button>關閉配對視窗</button></div><output role="status"></output></form>`;
  const input=dialog.querySelector('#pair-input'),output=dialog.querySelector('#pair-output'),status=dialog.querySelector('output');
  const connect=async task=>{
   const buttons=dialog.querySelectorAll('button[type=button]');
