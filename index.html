@@ -102,8 +102,8 @@ function validation(key){
 }
 function home(){
  const groups=[
-  ['運鏡提示器',[['運鏡提示器-控制端','motion'],['運鏡提示器-顯示端','monitor']]],
-  ['現場導播Run Show',[['現場導播Run Show-控制端','run'],['現場導播Run Show-顯示端','run-monitor']]]
+  ['運鏡提示器',[['控制端','motion'],['顯示端','monitor']]],
+  ['現場導播Run Show',[['控制端','run'],['顯示端','run-monitor']]]
  ];
  return '<h1>現場製作工具</h1>'+groups.map(([title,items])=>`<section><h2>${title}</h2><div class="tool-list">${items.map(([label,page])=>`<a class="tool-row" href="#${page}"><h3>${label}</h3><span class="accent">↗</span></a>`).join('')}</div></section>`).join('');
 }
