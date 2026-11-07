@@ -22,16 +22,18 @@ const route=()=>location.hash.slice(1).split('?')[0];
 const now=()=>Math.min(duration,media&&route()==='motion'?audio.currentTime:anchor+(running?(performance.now()-stamp)/1000:0));
 const sorted=key=>rows[key].filter(r=>Number.isFinite(r.t)&&(key==='motion'||r.t>=0)&&(r.name.trim()||(key==='motion'&&r.section))).slice().sort((a,b)=>a.t-b.t);
 let peer, wire, sentRows='';
+const controllerId=crypto.randomUUID();
+let snapshotSequence=0;
 function sync(){
  if(route()==='run'){
-  const state={kind:'run',t:now(),playing:running,duration,rows:sorted('shots'),epoch};
+  const state={controllerId,sequence:++snapshotSequence,kind:'run',t:now(),playing:running,duration,rows:sorted('shots'),epoch};
   channel.postMessage(state);
   if(cloudReady&&performance.now()-cloudSent>=300){cloudSent=performance.now();sendCloud(state)}
   return;
  }
  if(motionStep!=='live'||route()!=='motion')return;
  const cues=sorted('motion').map(row=>({...row,id:rows.motion.indexOf(row)}));
- const state={t:now(),playing:running&&!audio.seeking&&audio.readyState>=3,at:performance.timeOrigin+performance.now(),duration,rows:cues,epoch,loop:audio.loop};
+ const state={controllerId,sequence:++snapshotSequence,t:now(),playing:running&&!audio.seeking&&audio.readyState>=3,at:performance.timeOrigin+performance.now(),duration,rows:cues,epoch,loop:audio.loop};
  channel.postMessage(state);
  if(cloudReady&&performance.now()-cloudSent>=300){
   cloudSent=performance.now();
@@ -66,7 +68,16 @@ function receiveState(data,paired=false){
   return;
  }
  if(route()!==(data.kind==='run'?'run-monitor':'monitor')||(!paired&&peer&&data.kind!=='run')||!Number.isFinite(data.t))return;
- remote={...data,rows:data.rows||remote?.rows||[],at:performance.timeOrigin+performance.now()};
+ const receivedAt=performance.timeOrigin+performance.now();
+ if(!acceptSnapshot(remote,data,receivedAt))return;
+ const sameController=remote?.controllerId===data.controllerId;
+ remote={...data,rows:data.rows||(sameController?remote?.rows:[])||[],at:receivedAt};
+}
+function acceptSnapshot(previous,incoming,receivedAt){
+ if(!previous)return true;
+ if(previous.controllerId!==incoming.controllerId)return receivedAt-previous.at>=2000;
+ if(!Number.isFinite(incoming.sequence))return !Number.isFinite(previous.sequence);
+ return incoming.sequence>(previous.sequence??-1);
 }
 channel.onmessage=({data})=>receiveState(data);
 let playbackRequest=0,epoch=0,monitorTime=0,monitorEpoch,previousRemoteTime=0;
@@ -495,14 +506,15 @@ function paint(){
  if(monitor){
   if(connected){
    const estimate=Math.min(remote.duration,remote.t+(remote.playing?Math.max(0,(performance.timeOrigin+performance.now())-remote.at)/1000:0));
-   if(monitorEpoch!==remote.epoch||remote.t<previousRemoteTime-.25||!remote.playing)monitorTime=estimate;
+   if(monitorEpoch!==remote.controllerId+':'+remote.epoch||remote.t<previousRemoteTime-.25||!remote.playing)monitorTime=estimate;
    else monitorTime=Math.max(monitorTime,estimate);
-   monitorEpoch=remote.epoch;
+   monitorEpoch=remote.controllerId+':'+remote.epoch;
    previousRemoteTime=remote.t;
   }
   t=monitorTime;
  }
- clock.textContent=fmt(t);
+ const timeLabel=fmt(t);
+ if(clock.textContent!==timeLabel)clock.textContent=timeLabel;
  const list=monitor?(remote?.rows||[]):page==='motion'?previewCues():sorted('shots');
  let current,next;
  for(const row of list){if((monitor||page==='motion')&&(row.t<0||row.t>(monitor?remote.duration:duration)))continue;if(row.t<=t)current=row;else{next=row;break}}
@@ -515,7 +527,7 @@ function paint(){
  const count=next?Math.max(0,next.t-t):0;
  const view=document.querySelector('#readout');
  if(view){
-  const html=`<section class="current"><div>${monitor&&!connected?'連線狀態':'現在'}</div><strong>${esc(monitor&&!connected?'等待主控端':(current?(current.name||current.section):'待命'))}</strong><div class="lyric">${esc(current?.lyric)}</div><div>${esc(current?.note||'')}</div></section><section class="next"><div class="accent">${next&&count<=next.lead?'準備移動':'下一條'} ${next?'／ '+count.toFixed(3)+' 秒':''}</div><strong>${esc(next?.name||next?.section||'—')}</strong><div class="lyric">${esc(next?.lyric)}</div><div>${esc(next?.note||'')}</div></section>`;
+  const html=`<section class="current"><div>${monitor&&!connected?'連線狀態':'現在'}</div><strong>${esc(monitor&&!connected?'等待主控端':(current?(current.name||current.section):'待命'))}</strong><div class="lyric">${esc(current?.lyric)}</div><div>${esc(current?.note||'')}</div></section><section class="next"><div class="accent">${next&&count<=next.lead?'準備移動':'下一條'} ${next?'／ '+count.toFixed(1)+' 秒':''}</div><strong>${esc(next?.name||next?.section||'—')}</strong><div class="lyric">${esc(next?.lyric)}</div><div>${esc(next?.note||'')}</div></section>`;
   if(view.dataset.markup!==html){view.innerHTML=html;view.dataset.markup=html}
  }
  if(runMonitor){
