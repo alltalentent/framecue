@@ -26,14 +26,14 @@ const controllerId=crypto.randomUUID();
 let snapshotSequence=0;
 function sync(){
  if(route()==='run'){
-  const state={controllerId,sequence:++snapshotSequence,kind:'run',t:now(),playing:running,duration,rows:sorted('shots'),epoch};
+  const state={projectName:projectName||'未命名專案',controllerId,sequence:++snapshotSequence,kind:'run',t:now(),playing:running,duration,rows:sorted('shots'),epoch};
   channel.postMessage(state);
   if(cloudReady&&performance.now()-cloudSent>=300){cloudSent=performance.now();sendCloud(state)}
   return;
  }
  if(motionStep!=='live'||route()!=='motion')return;
  const cues=sorted('motion').map(row=>({...row,id:rows.motion.indexOf(row)}));
- const state={controllerId,sequence:++snapshotSequence,t:now(),playing:running&&!audio.seeking&&audio.readyState>=3,at:performance.timeOrigin+performance.now(),duration,rows:cues,epoch,loop:audio.loop};
+ const state={projectName:projectName||'未命名專案',controllerId,sequence:++snapshotSequence,t:now(),playing:running&&!audio.seeking&&audio.readyState>=3,at:performance.timeOrigin+performance.now(),duration,rows:cues,epoch,loop:audio.loop};
  channel.postMessage(state);
  if(cloudReady&&performance.now()-cloudSent>=300){
   cloudSent=performance.now();
@@ -116,7 +116,7 @@ function home(){
   ['運鏡提示器',[['控制端','motion'],['顯示端','monitor']]],
   ['現場導播Run Show',[['控制端','run'],['顯示端','run-monitor']]]
  ];
- return '<h1>現場製作工具</h1>'+groups.map(([title,items])=>`<section><h2>${title}</h2><div class="tool-list">${items.map(([label,page])=>`<a class="tool-row" href="#${page}"><h3>${label}</h3></a>`).join('')}</div></section>`).join('');
+ return '<h1>現場製作工具</h1>'+groups.map(([title,items])=>`<section><h2>${title}</h2><div class="tool-list">${items.map(([label,page])=>`<a class="tool-row" href="#${page}"><h3>${label}</h3></a>`).join('')}</div></section>`).join('')+'<section class="panel"><h2>我的運鏡專案</h2><p class="muted" id="home-project-status">正在讀取已存專案…</p><div id="home-projects"></div></section>';
 }
 let motionStep='upload', analyzed=false, offset=0;
 function editor(key){return `<section class="panel"><h2 class="${key==='motion'&&motionStep==='upload'?'tag':''}">${key==='motion'?(motionStep==='upload'?'02 載入歌詞':'歌詞分配與走位'):'鏡位時間軸'}</h2><div class="bar">${key==='motion'&&motionStep==='upload'?'':'<button id="add">＋ 新增 cue</button>'}${key==='motion'?(motionStep==='upload'?'<label>載入歌詞 <input id="csv" type="file" accept=".csv,text/csv"></label>':''):'<a class="button primary" href="#run">進入 Run Show ↗</a>'}</div>${key==='motion'&&motionStep==='upload'?linkForm('lyrics','歌詞'):''}<p class="muted" id="validate"></p><div class="table" ${key==='motion'&&motionStep==='upload'?'hidden':''}><table><thead><tr><th>時間（秒）</th>${key==='motion'?'<th>段落</th>':''}<th>${key==='motion'?'開口者／段落':'攝影機'}</th>${key==='motion'?'<th>歌詞</th>':''}<th>拍攝指令</th><th>提前（秒）</th><th></th></tr></thead><tbody>${rows[key].map((r,i)=>`<tr>${(key==='motion'?['t','section','name','lyric','note','lead']:['t','name','note','lead']).map(k=>`<td><${k==='lyric'?'textarea':'input'} aria-label="${({t:'時間',section:'段落',lyric:'歌詞',name:'名稱',note:'拍攝指令',lead:'提前秒數'})[k]}，第 ${i+1} 列" data-row="${i}" data-key="${k}" ${k==='lyric'?'>'+esc(r[k])+'</textarea>':'value="'+esc(r[k])+'">'}</td>`).join('')}<td><button data-jump="${i}">定位</button>${key==='motion'? ` <button data-mark="${i}">取目前秒數</button>`:''} <button data-delete="${i}" aria-label="刪除第 ${i+1} 列">×</button></td></tr>`).join('')}</tbody></table></div></section>`}
@@ -158,16 +158,16 @@ async function toggleMonitorFull(){
  app.classList.add('focus-view');
 }
 function render(){
- const page=route();if(page!=='monitor')app.classList.remove('focus-view');app.classList.toggle('operator',page==='monitor'||(page==='motion'&&motionStep==='live'));const key=page==='motion'?'motion':'shots';
+ const page=route();updateWakeLock();if(page!=='monitor')app.classList.remove('focus-view');app.classList.toggle('operator',page==='monitor'||(page==='motion'&&motionStep==='live'));const key=page==='motion'?'motion':'shots';
  if(page!=='monitor')duration=page==='motion'?(media?audio.duration:0):showDuration();
  if(page==='run-monitor'){
   app.innerHTML='<a class="muted" href="#">← 工具首頁</a><h1>現場導播Run Show-顯示端</h1><div class="clock" id="clock"></div><p id="run-status" class="muted"></p>'+readout();
   paint();return;
  }
- if(!['motion','shots','run','monitor'].includes(page)){app.innerHTML=home();return}
+ if(!['motion','shots','run','monitor'].includes(page)){app.innerHTML=home();refreshHomeProjects();return}
  const titles={motion:'運鏡提示器',shots:'多機鏡位編排',run:'現場導播 Run Show',monitor:'攝影提示端'};
  const desc={motion:'主控端 · 匯入歌詞分配表及伴奏，排定拍攝提示',shots:'為每個時間點指定攝影機、拍攝對象與景別',run:'跟著時間軸提示切鏡，也能手動按 GO',monitor:'跟隨控制端的音樂進度'};
- app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="clock" id="clock"></div><div class="bar"><button class="operator-cloud">雲端帳號</button><button id="pair-open">連接主控</button><button id="monitor-full" aria-pressed="false">全螢幕</button><span id="monitor-status" class="muted"></span></div><div class="bar monitor-controls"><button class="primary" id="remote-play" disabled>播放</button><button data-transport="restart" disabled>回到開頭播放</button><button data-transport="loop" aria-pressed="false" disabled>循環播放</button></div>'+readout():transport(key)+(page==='run'?'<div class="bar"><a class="button" href="#shots">編輯鏡位</a><a class="button" href="#run-monitor" target="_blank" rel="noopener">開啟顯示端</a></div>':'')+(page==='motion'&&motionStep==='upload'?editor(key):'')+(page==='motion'?motionControls():'')+(page!=='shots'&&(page!=='motion'||motionStep!=='upload')?readout():'')+(page==='run'||(page==='motion'&&motionStep!=='review')?'':editor(key)));
+ app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="clock" id="clock"></div><div class="bar"><button class="operator-cloud">雲端帳號</button><button id="pair-open">連接主控</button><button id="monitor-full" aria-pressed="false">全螢幕</button><span id="monitor-status" role="status" class="muted"></span></div><div class="bar monitor-controls"><button class="primary" id="remote-play" disabled>播放</button><button data-transport="restart" disabled>回到開頭播放</button><button data-transport="loop" aria-pressed="false" disabled>循環播放</button></div>'+readout():transport(key)+(page==='run'?'<div class="bar"><a class="button" href="#shots">編輯鏡位</a><a class="button" href="#run-monitor" target="_blank" rel="noopener">開啟顯示端</a></div>':'')+(page==='motion'&&motionStep==='upload'?editor(key):'')+(page==='motion'?motionControls():'')+(page!=='shots'&&(page!=='motion'||motionStep!=='upload')?readout():'')+(page==='run'||(page==='motion'&&motionStep!=='review')?'':editor(key)));
  updateCloudButtons();
  if(page==='monitor'){
   document.querySelector('#pair-open').onclick=()=>pairDialog(false);
@@ -540,7 +540,9 @@ function paint(){
   const status=document.querySelector('#monitor-status');
   const linked=wire?.readyState==='open';
   const state=peer?.connectionState;
-  const message=linked?(connected?'跨裝置已連線':'已配對 · 等待主控進度'):(connected?(cloudReady?'雲端已連線':'同一瀏覽器已連線'):state==='failed'||state==='disconnected'?'連線中斷 · 可重新配對':'等待主控連線');
+  const connection=linked?(connected?'跨裝置已連線':'已配對 · 等待主控進度'):(connected?(cloudReady?'雲端已連線':'同一瀏覽器已連線'):state==='failed'||state==='disconnected'?'連線中斷 · 可重新配對':'等待主控連線');
+  const age=remote?Math.max(0,((performance.timeOrigin+performance.now())-remote.at)/1000):0;
+  const message=connection+(remote?' · '+(remote.projectName||'未命名專案')+' · 主控 '+remote.controllerId.slice(0,6)+(connected?'':' · 已停止跟隨 '+Math.floor(age)+' 秒，等待重新連線'):'')+(wakeLock?' · 螢幕保持喚醒':'');
   if(status.textContent!==message)status.textContent=message;
   const play=document.querySelector('#remote-play');
   const label=remote?.playing?'暫停':'播放';
@@ -578,7 +580,7 @@ function paint(){
 }
 let sourceAudio,projectId=null,projectName='';
 function snapshot(name,id){
- return {id,name,cues:structuredClone(rows.motion),audio:sourceAudio,loop:audio.loop};
+ return {id,name,updated_at:new Date().toISOString(),duration:audio.duration||0,cues:structuredClone(rows.motion),audio:sourceAudio,loop:audio.loop};
 }
 function projectAccess(project){
  return new Promise((resolve,reject)=>{
@@ -612,7 +614,7 @@ async function openProjectPicker(){
  const status=document.querySelector('#analysis-status');
  try{
   const local=await projectAccess();
-  const cloud=cloudUser?await cloudClient.from('framecue_projects').select('id,name,cues,audio_path,audio_url,loop').order('updated_at',{ascending:false}):null;
+  const cloud=cloudUser?await cloudClient.from('framecue_projects').select('id,name,cues,audio_path,audio_url,loop,updated_at').order('updated_at',{ascending:false}):null;
   if(cloud?.error)throw cloud.error;
   const online=cloud?.data||[];
   const projects=[...online.map(project=>({...project,cloud:true})),...local.filter(project=>!online.some(onlineProject=>onlineProject.id===project.id))];
@@ -776,7 +778,7 @@ async function connectCloud(){
   if(cloudRoom!==room)return;
   cloudReady=status==='SUBSCRIBED';
   document.querySelector('#cloud-label').textContent=cloudReady?'雲端已連線':'雲端連線 '+status;
-  if(cloudReady&&route()==='monitor')sendCloud({requestState:true});
+  if(cloudReady&&['monitor','run-monitor'].includes(route()))sendCloud({requestState:true});
  });
 }
 function queueCloudSave(project,status){
@@ -859,11 +861,65 @@ async function initCloud(){
     cloudUser=next;
     setTimeout(()=>connectCloud().catch(()=>{label.textContent='雲端連線失敗'}),0);
    }
-   updateCloudButtons();
+   updateCloudButtons();refreshHomeProjects();
    if(!cloudUser)label.textContent='';
   });
  }catch{label.textContent='暫時無法載入雲端服務'}
  finally{button.disabled=!cloudClient;updateCloudButtons()}
+}
+// Keep display devices awake; reacquire after returning from the background.
+let wakeLock=null,wakePending=false;
+async function updateWakeLock(){
+ const wanted=['monitor','run-monitor'].includes(route())&&document.visibilityState==='visible';
+ if(!wanted){if(wakeLock)await wakeLock.release().catch(()=>{});wakeLock=null;return}
+ if(wakeLock||wakePending||!navigator.wakeLock)return;
+ wakePending=true;
+ try{const lock=await navigator.wakeLock.request('screen');
+  if(!['monitor','run-monitor'].includes(route())){await lock.release();return}
+  wakeLock=lock;lock.addEventListener('release',()=>{if(wakeLock===lock)wakeLock=null});
+ }catch{}finally{wakePending=false}
+}
+let lastReconnect=0;
+function recoverConnection(){
+ updateWakeLock();
+ if(document.visibilityState!=='visible')return;
+ if(cloudUser&&!cloudReady&&Date.now()-lastReconnect>5000){lastReconnect=Date.now();connectCloud().catch(()=>{})}
+ else if(cloudReady&&['monitor','run-monitor'].includes(route()))sendCloud({requestState:true});
+}
+window.addEventListener('online',recoverConnection);
+document.addEventListener('visibilitychange',recoverConnection);
+setInterval(recoverConnection,10000);
+let homeLoad=0;
+async function refreshHomeProjects(){
+ const target=document.querySelector('#home-projects'),status=document.querySelector('#home-project-status');
+ if(!target)return;
+ const ticket=++homeLoad;
+ try{
+  const local=await projectAccess();
+  const response=cloudUser?await cloudClient.from('framecue_projects').select('id,name,cues,audio_path,audio_url,loop,updated_at').order('updated_at',{ascending:false}):null;
+  if(ticket!==homeLoad||!target.isConnected)return;
+  const online=response?.data||[];
+  const projects=[...online.map(p=>({...p,cloud:true})),...local.filter(p=>!online.some(c=>c.id===p.id))].sort((a,b)=>(b.updated_at||'').localeCompare(a.updated_at||''));
+  status.textContent=response?.error?'雲端讀取失敗，先顯示本機專案。':projects.length?'選擇專案即可繼續編輯；顯示端會跟隨正在播放的主控。':cloudUser?'尚未儲存專案。請先進入控制端建立。':'登入雲端帳號即可開啟其他裝置的專案。';
+  target.replaceChildren();
+  for(const project of projects){
+   const card=document.createElement('div');card.className='panel';
+   const title=document.createElement('h3');title.textContent=project.name||'未命名專案';
+   const detail=document.createElement('p');detail.className='muted';detail.textContent=(project.cloud?'雲端':'本機')+' · '+project.cues.length+' 條提示'+(project.duration?' · '+fmt(project.duration):'')+(project.updated_at?' · '+new Date(project.updated_at).toLocaleString('zh-TW'):'');
+   const bar=document.createElement('div');bar.className='bar';
+   const open=document.createElement('button');open.className='primary';open.textContent='開啟控制端';
+   open.onclick=async()=>{
+    open.disabled=true;open.textContent='正在開啟…';
+    try{
+     const loaded={...project};
+     if(loaded.cloud){loaded.audio=loaded.audio_url;if(loaded.audio_path){const {data,error}=await cloudClient.storage.from('framecue-audio').download(loaded.audio_path);if(error)throw error;loaded.audio=new File([data],loaded.name,{type:data.type});cloudAudio.set(loaded.id,{source:loaded.audio,path:loaded.audio_path})}}
+     await new Promise(resolve=>{window.addEventListener('hashchange',resolve,{once:true});location.hash='motion'});
+     restoreProject(loaded);
+    }catch{open.disabled=false;open.textContent='重新開啟';status.textContent='專案開啟失敗，請確認網路後再試。'}
+   };
+   bar.append(open);card.append(title,detail,bar);target.append(card);
+  }
+ }catch{if(status.isConnected)status.textContent='無法讀取專案，請重新整理。'}
 }
 const sharedCues=new URLSearchParams(location.hash.split('?')[1]).get('cues');
 if(route()==='motion'&&sharedCues){
