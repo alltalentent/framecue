@@ -685,8 +685,15 @@ function projectAccess(project,lookupId){
    const db=request.result;
    const tx=db.transaction('projects',project?'readwrite':'readonly');
    const store=tx.objectStore('projects');
-   const operation=project?store.put(project,project.id):lookupId!==undefined?store.get(lookupId):store.getAll();
-   tx.oncomplete=()=>{db.close();resolve(operation.result)};
+   const listing=!project&&lookupId===undefined;
+   const keys=listing?store.getAllKeys():null;
+   const operation=project?store.put(project,lookupId??project.id):listing?store.getAll():store.get(lookupId);
+   tx.oncomplete=()=>{
+    db.close();
+    if(!listing){resolve(operation.result);return}
+    // Early versions stored a project under the key "last" without an ID in its contents.
+    resolve(operation.result.map((record,index)=>record.id==null?{...record,localKey:keys.result[index]}:record));
+   };
    tx.onabort=()=>{db.close();reject(tx.error)};
   };
  });
@@ -1058,10 +1065,12 @@ async function refreshHomeProjects(){
 async function setProjectDeleted(project,deleted){
  const deletedAt=deleted?new Date().toISOString():null;
  if(!project.cloud&&!project.cloud_updated_at){
-  const cached=await projectAccess(null,project.id);
+  const key=project.localKey??project.id;
+  if(key==null)throw Error('找不到此專案的儲存位置，請重新整理清單。');
+  const cached=await projectAccess(null,key);
   if(!cached)throw Error('找不到此裝置上的專案，請重新整理清單。');
   const updated={...cached,deletedAt,updated_at:new Date().toISOString()};
-  await projectAccess(updated);
+  await projectAccess(updated,key);
   return updated;
  }
  if(!cloudUser)throw Error('請登入雲端帳號後再管理此專案。');
