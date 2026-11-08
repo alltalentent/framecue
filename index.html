@@ -676,7 +676,7 @@ let sourceAudio,projectId=null,projectName='';
 function snapshot(name,id){
  return {id,name,updated_at:new Date().toISOString(),cloud_updated_at:cloudBases.get(id),duration:audio.duration||0,cues:structuredClone(rows.motion),audio:sourceAudio,loop:audio.loop,segment:{...segment}};
 }
-function projectAccess(project){
+function projectAccess(project,lookupId){
  return new Promise((resolve,reject)=>{
   const request=indexedDB.open('framecue-projects',1);
   request.onupgradeneeded=()=>request.result.createObjectStore('projects');
@@ -685,7 +685,7 @@ function projectAccess(project){
    const db=request.result;
    const tx=db.transaction('projects',project?'readwrite':'readonly');
    const store=tx.objectStore('projects');
-   const operation=project?store.put(project,project.id):store.getAll();
+   const operation=project?store.put(project,project.id):lookupId!==undefined?store.get(lookupId):store.getAll();
    tx.oncomplete=()=>{db.close();resolve(operation.result)};
    tx.onabort=()=>{db.close();reject(tx.error)};
   };
@@ -1002,41 +1002,88 @@ async function refreshHomeProjects(){
   const online=(response?.data||[]).map(decodeProject);
   const projects=[...online.map(p=>({...p,cloud:true})),...local.filter(p=>!online.some(c=>c.id===p.id))].sort((a,b)=>(b.updated_at||'').localeCompare(a.updated_at||''));
   status.textContent=response?.error?'雲端讀取失敗，先顯示本機專案。':projects.length?'選擇專案即可繼續編輯；顯示端會跟隨正在播放的主控。':cloudUser?'尚未儲存專案。請先進入控制端建立。':'登入雲端帳號即可開啟其他裝置的專案。';
-  target.replaceChildren();
-  const trash=document.createElement('details');trash.className='project-trash';trash.innerHTML='<summary>回收桶（'+projects.filter(p=>p.deletedAt).length+'）</summary><p class="muted">刪除的專案可以在此復原。</p>';
-  for(const project of projects){
-   const card=document.createElement('div');card.className='panel';
-   const title=document.createElement('h3');title.textContent=project.name||'未命名專案';
-   const detail=document.createElement('p');detail.className='muted';detail.textContent=(project.cloud?'雲端':'本機')+' · '+project.cues.length+' 條提示'+(project.duration?' · '+fmt(project.duration):'')+(project.updated_at?' · '+new Date(project.updated_at).toLocaleString('zh-TW'):'');
-   const bar=document.createElement('div');bar.className='bar';
-   const open=document.createElement('button');open.className='primary';open.textContent='開啟控制端';
-   open.onclick=async()=>{
-    open.disabled=true;open.textContent='正在開啟…';
-    try{
-     const loaded={...project};
-     if(loaded.cloud){loaded.audio=loaded.audio_url;if(loaded.audio_path){const {data,error}=await cloudClient.storage.from('framecue-audio').download(loaded.audio_path);if(error)throw error;loaded.audio=new File([data],loaded.name,{type:data.type});cloudAudio.set(loaded.id,{source:loaded.audio,path:loaded.audio_path})}}
-     await new Promise(resolve=>{window.addEventListener('hashchange',resolve,{once:true});location.hash='motion'});
-     restoreProject(loaded);
-    }catch{open.disabled=false;open.textContent='重新開啟';status.textContent='專案開啟失敗，請確認網路後再試。'}
-   };
-   const remove=document.createElement('button');remove.textContent=project.deletedAt?'復原專案':'刪除專案';remove.onclick=async()=>{remove.disabled=true;try{await setProjectDeleted(project,!project.deletedAt);await refreshHomeProjects()}catch(error){remove.disabled=false;status.textContent='操作失敗 · '+error.message}};
-   if(!project.deletedAt)bar.append(open);bar.append(remove);card.append(title,detail,bar);(project.deletedAt?trash:target).append(card);
+  function renderProjects(showTrash=false){
+   target.replaceChildren();
+   const trash=document.createElement('details');trash.className='project-trash';trash.innerHTML='<summary>回收桶（'+projects.filter(p=>p.deletedAt).length+'）</summary><p class="muted">刪除的專案可以在此復原。</p>';
+   for(const project of projects){
+    const card=document.createElement('div');card.className='panel';
+    const title=document.createElement('h3');title.textContent=project.name||'未命名專案';
+    const detail=document.createElement('p');detail.className='muted';detail.textContent=(project.cloud?'雲端':'本機')+' · '+project.cues.length+' 條提示'+(project.duration?' · '+fmt(project.duration):'')+(project.updated_at?' · '+new Date(project.updated_at).toLocaleString('zh-TW'):'');
+    const bar=document.createElement('div');bar.className='bar';
+    const open=document.createElement('button');open.className='primary';open.textContent='開啟控制端';
+    open.onclick=async()=>{
+     open.disabled=true;open.textContent='正在開啟…';
+     try{
+      const loaded={...project};
+      if(loaded.cloud){loaded.audio=loaded.audio_url;if(loaded.audio_path){const {data,error}=await cloudClient.storage.from('framecue-audio').download(loaded.audio_path);if(error)throw error;loaded.audio=new File([data],loaded.name,{type:data.type});cloudAudio.set(loaded.id,{source:loaded.audio,path:loaded.audio_path})}}
+      await new Promise(resolve=>{window.addEventListener('hashchange',resolve,{once:true});location.hash='motion'});
+      restoreProject(loaded);
+     }catch{open.disabled=false;open.textContent='重新開啟';status.textContent='專案開啟失敗，請確認網路後再試。'}
+    };
+    const remove=document.createElement('button');
+    remove.textContent=project.deletedAt?'復原專案':'刪除專案';
+    const feedback=document.createElement('p');
+    feedback.className='muted';
+    feedback.setAttribute('role','status');
+    remove.onclick=async()=>{
+     const deleting=!project.deletedAt;
+     const label=remove.textContent;
+     remove.disabled=true;
+     open.disabled=true;
+     remove.textContent=deleting?'移至回收桶中…':'復原中…';
+     feedback.textContent='';
+     try{
+      Object.assign(project,await setProjectDeleted(project,deleting));
+      if(ticket!==homeLoad||!target.isConnected)return;
+      renderProjects(deleting||trash.open);
+      status.textContent=deleting?'「'+title.textContent+'」已移至回收桶。':'「'+title.textContent+'」已復原。';
+     }catch(error){
+      feedback.textContent=error.message||'暫時無法更新專案，請再試一次。';
+      remove.textContent=label;
+      remove.disabled=false;
+      open.disabled=false;
+     }
+    };
+    if(!project.deletedAt)bar.append(open);
+    bar.append(remove);
+    card.append(title,detail,bar,feedback);
+    (project.deletedAt?trash:target).append(card);
+   }
+   trash.open=showTrash;
+   target.append(trash);
   }
-  target.append(trash);
-  if(!projects.some(p=>!p.deletedAt)&&projects.length)status.textContent='目前沒有使用中的專案，可從回收桶復原。';
+  renderProjects();
  }catch{if(status.isConnected)status.textContent='無法讀取專案，請重新整理。'}
 }
 async function setProjectDeleted(project,deleted){
  const deletedAt=deleted?new Date().toISOString():null;
- let updatedAt=new Date().toISOString();
- if(project.cloud){
-  if(!cloudUser)throw Error('請先登入雲端帳號');
-  const cues={version:2,rows:project.cues,settings:{segment:project.segment,deletedAt}};
-  const result=await cloudClient.from('framecue_projects').update({cues,updated_at:updatedAt}).eq('id',project.id).eq('updated_at',project.updated_at).select('id').single();
-  if(result.error||!result.data)throw Error('專案已在其他裝置更新，請重新載入清單後再試。');
+ if(!project.cloud&&!project.cloud_updated_at){
+  const cached=await projectAccess(null,project.id);
+  if(!cached)throw Error('找不到此裝置上的專案，請重新整理清單。');
+  const updated={...cached,deletedAt,updated_at:new Date().toISOString()};
+  await projectAccess(updated);
+  return updated;
  }
- const local=await projectAccess();const cached=local.find(p=>p.id===project.id);
- if(cached)await projectAccess({...cached,deletedAt,updated_at:updatedAt,cloud_updated_at:project.cloud?updatedAt:cached.cloud_updated_at});
+ if(!cloudUser)throw Error('請登入雲端帳號後再管理此專案。');
+ const {data:latest,error:readError}=await cloudClient.from('framecue_projects')
+  .select('id,name,cues,audio_path,audio_url,loop,updated_at').eq('id',project.id).abortSignal(AbortSignal.timeout(12000)).single();
+ if(readError||!latest)throw Error('無法讀取雲端專案，請確認連線後再試。');
+ const decoded=decodeProject(latest);
+ if(Boolean(decoded.deletedAt)===deleted)return {...decoded,cloud:true};
+ const settings=Array.isArray(latest.cues)?{}:latest.cues.settings;
+ const cues={version:2,rows:decoded.cues,settings:{...settings,deletedAt}};
+ const updatedAt=new Date(Math.max(Date.now(),Date.parse(latest.updated_at)+1)).toISOString();
+ const {data:updated,error}=await cloudClient.from('framecue_projects')
+  .update({cues,updated_at:updatedAt}).eq('id',project.id).eq('updated_at',latest.updated_at)
+  .select('id,name,cues,audio_path,audio_url,loop,updated_at').abortSignal(AbortSignal.timeout(12000)).maybeSingle();
+ if(error)throw Error('雲端專案更新失敗，請確認連線後再試。');
+ if(!updated)throw Error('另一台裝置剛更新了專案，請再按一次。');
+ // The cloud update succeeded even if the browser cannot update its local cache.
+ try{
+  const cached=await projectAccess(null,project.id);
+  if(cached)await projectAccess({...cached,deletedAt});
+ }catch(error){console.warn('無法更新本機專案的回收桶狀態',error)}
+ return {...decodeProject(updated),cloud:true};
 }
 let reader={person:20,lyric:16,note:16,scale:100,personWidth:1,lyricWidth:3,noteWidth:2,focus:''};
 try{reader={...reader,...JSON.parse(localStorage.getItem('framecue-reader-v2')||'{}')}}catch{}
