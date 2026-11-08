@@ -60,10 +60,13 @@ function sync(){
   sentRows=serialized;
  }
 }
+const handledCommands=new Set();
+let pendingRemoteSeek=null;
 function receiveState(data,paired=false){
  if(data.requestState){if(paired)sync();return}
  if(data.transport){
-  if(paired&&(!data.target||data.target===controllerId)&&route()==='motion'&&motionStep==='live'&&media){
+  if((paired||data.target===controllerId)&&(!data.target||data.target===controllerId)&&route()==='motion'&&motionStep==='live'&&media){
+   if(data.commandId){if(handledCommands.has(data.commandId))return;handledCommands.add(data.commandId);if(handledCommands.size>200)handledCommands.delete(handledCommands.values().next().value)}
    if(data.transport==='pause'){pause();sync()}
    if(data.transport==='play'&&audio.paused)controlPlayback('play');
    if(data.transport==='restart'){seek(0);controlPlayback('play');sync()}
@@ -183,16 +186,30 @@ function render(){
  app.innerHTML=`<a class="muted" href="#">← 工具首頁</a><h1>${titles[page]}</h1><p class="muted">${desc[page]}</p>`+(page==='monitor'?'<div class="monitor-utility"><a href="#">← 工具首頁</a><button class="operator-cloud">雲端帳號</button></div><section class="monitor-transport"><div class="monitor-transport-main"><div class="clock" id="clock"></div><div class="monitor-controls"><button class="primary" id="remote-play" disabled>播放</button><button data-transport="restart" disabled>回到開頭播放</button><button data-transport="loop" aria-pressed="false" disabled>循環播放</button><button id="monitor-full" aria-pressed="false">全螢幕</button></div></div><div class="monitor-progress"><span id="remote-position">00:00.000</span><input id="remote-seek" aria-label="音樂播放進度" type="range" min="0" max="0" step="0.01" disabled><span id="remote-duration">00:00.000</span></div><span id="monitor-status" role="status" class="muted"></span></section>'+readout():transport(key)+(page==='run'?'<div class="bar"><a class="button" href="#shots">編輯鏡位</a><a class="button" href="#run-monitor" target="_blank" rel="noopener">開啟顯示端</a></div>':'')+(page==='motion'&&motionStep==='upload'?editor(key):'')+(page==='motion'?motionControls():'')+(page!=='shots'&&(page!=='motion'||motionStep!=='upload')?readout():'')+(page==='run'||(page==='motion'&&motionStep!=='review')?'':editor(key)));
  updateCloudButtons();
  if(page==='monitor'){
-  const send=(transport,position)=>sendCloud({transport,position,target:remote?.controllerId});
+  const send=(transport,position)=>{
+   if(!remote)return;
+   const command={transport,position,target:remote.controllerId,commandId:crypto.randomUUID()};
+   channel.postMessage(command);sendCloud(command);
+  };
   const progress=document.querySelector('#remote-seek');
-  let dragging=false;
-  progress.onpointerdown=()=>{dragging=true;progress.dataset.dragging='true'};
-  progress.oninput=()=>{progress.dataset.dragging='true';document.querySelector('#remote-position').textContent=fmt(+progress.value)};
-  const commitSeek=()=>{if(progress.dataset.dragging!=='true')return;delete progress.dataset.dragging;dragging=false;send('seek',+progress.value);progress.blur()};
-  progress.onchange=commitSeek;
-  progress.onpointerup=commitSeek;
-  progress.onpointercancel=()=>{delete progress.dataset.dragging;dragging=false};
-  progress.onblur=()=>{if(!dragging)commitSeek()};
+  let seekTimer;
+  const commitSeek=()=>{
+   clearTimeout(seekTimer);
+   if(progress.dataset.dragging!=='true')return;
+   const position=+progress.value;
+   pendingRemoteSeek={position,epoch:remote?.epoch,controllerId:remote?.controllerId,at:performance.now()};
+   send('seek',position);
+  };
+  progress.onpointerdown=()=>{progress.dataset.dragging='true';pendingRemoteSeek=null};
+  progress.oninput=()=>{
+   progress.dataset.dragging='true';
+   document.querySelector('#remote-position').textContent=fmt(+progress.value);
+   clearTimeout(seekTimer);seekTimer=setTimeout(commitSeek,100);
+  };
+  progress.onchange=()=>{commitSeek();delete progress.dataset.dragging};
+  progress.onpointerup=()=>{setTimeout(()=>{commitSeek();delete progress.dataset.dragging},0)};
+  progress.onpointercancel=()=>{clearTimeout(seekTimer);delete progress.dataset.dragging};
+  progress.onblur=()=>{commitSeek();delete progress.dataset.dragging};
   document.querySelector('#remote-play').onclick=()=>send(remote?.playing?'pause':'play');
   for(const button of app.querySelectorAll('[data-transport]'))button.onclick=()=>send(button.dataset.transport);
   document.querySelector('#monitor-full').onclick=toggleMonitorFull;
@@ -564,13 +581,15 @@ function paint(){
   const play=document.querySelector('#remote-play');
   const label=remote?.playing?'暫停':'播放';
   if(play.textContent!==label)play.textContent=label;
-  play.disabled=(!linked&&!cloudReady)||!connected;
+  play.disabled=!connected;
   document.querySelector('[data-transport=restart]').disabled=play.disabled;
   paintLoop(document.querySelector('[data-transport=loop]'),!!remote?.loop,play.disabled);
   const progress=document.querySelector('#remote-seek');
   progress.disabled=play.disabled||!remote?.duration;
-  progress.max=remote?.duration||0;
-  if(progress.dataset.dragging!=='true'){progress.value=t;const position=document.querySelector('#remote-position');if(position.textContent!==fmt(t))position.textContent=fmt(t)}
+  const maximum=String(remote?.duration||0);if(progress.max!==maximum)progress.max=maximum;
+  if(pendingRemoteSeek&&(remote?.controllerId!==pendingRemoteSeek.controllerId||(remote?.epoch!==pendingRemoteSeek.epoch&&Math.abs(remote.t-pendingRemoteSeek.position)<2)||performance.now()-pendingRemoteSeek.at>4000))pendingRemoteSeek=null;
+  const displayPosition=pendingRemoteSeek?.position??t;
+  if(progress.dataset.dragging!=='true'){if(Math.abs(+progress.value-displayPosition)>.005)progress.value=displayPosition;const position=document.querySelector('#remote-position');if(position.textContent!==fmt(displayPosition))position.textContent=fmt(displayPosition)}
   const total=document.querySelector('#remote-duration');const totalLabel=fmt(remote?.duration||0);if(total.textContent!==totalLabel)total.textContent=totalLabel;
   const full=document.querySelector('#monitor-full');
   const expanded=!!document.fullscreenElement||app.classList.contains('focus-view');
